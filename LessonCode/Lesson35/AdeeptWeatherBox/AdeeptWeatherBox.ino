@@ -1,0 +1,365 @@
+/***********************************************************
+File name:   AdeeptWeatherBox.ino
+Website: www.adeept.com
+E-mail: support@adeept.com
+Author: Tom
+Date: 2017/03/04
+***********************************************************/
+#include <Adeept_LCD12864RSPI.h>
+#include <Adeept_DHT11.h>
+#include <Adeept_BMP180.h>
+#include <Adeept_GP2.h>
+
+Adeept_DHT11 Adeept_dht11;
+Adeept_BMP180 Adeept_bmp180(0x77);//I2C address of BMP180
+#define AR_SIZE( a ) sizeof( a ) / sizeof( a[0] )
+int PIN_DATA_OUT = 2; //Connect the IO port of the GP2 sensor analog A2 output
+int PIN_LED_VCC = 4;  //The pin in the GP2 sensor that supplies power to the internal Led
+Adeept_GP2  Adeept_gp2(PIN_DATA_OUT, PIN_LED_VCC);
+
+/******************************/
+int humidityThreshold = 60;    //Set the humidity alarm threshold.(range: 20~90 %RH)
+int temperatureThreshold = 30; //Set the temperature alarm threshold.(range: 0~50 C)
+int gasThreshold = 300;        //Set the gas/smoke alarm threshold.(range: 0~1023)
+/*****************************/
+/*****************************/
+unsigned long oldTime=0;
+unsigned long newTime;
+unsigned long time;
+int Time = 17;
+int Minute = 35;
+int Second = 10;
+/*****************************/
+
+#define DHT11PIN  2        //Set the digital 2 to the DHT11 pin
+
+int redPin = 11;           // R petal on RGB LED module connected to digital pin 11 
+int greenPin = 10;         // G petal on RGB LED module connected to digital pin 10 
+int bluePin = 6;           // B petal on RGB LED module connected to digital pin 6
+int gassensorSPin = 7;     //connect S pin to digital 7 pin 
+int gassensorAPin = 1;     //connect A pin to analog 1 pin
+int passiveBuzzerPin=5;    //definition digital 5 pins as pin to control the passive buzzer
+int blueButton1Pin=13;     //Set the digital 13 to blue 1 button module interface 
+int blueButton2Pin=12;     //Set the digital 12 to blue 2 button module interface 
+int redButtonPin=1;        //Set the digital 1 to red button module interface 
+int whiteButtonPin=0;      //Set the digital 0 to white button module interface 
+int photoresistorPin = 0;  // photoresistor  connected to analog pin 0
+
+unsigned char show0[] = "    :   :";       
+unsigned char show1[] = "  Weather box  ";     
+unsigned char show2[] = " www.adeept.com";  
+//unsigned char show3[] = "               ";    
+unsigned char show4[] = "Shutting down.";    
+unsigned char show5[] = "Shutting down..";    
+unsigned char show6[] = "Shutting down...";     
+unsigned char show7[] = " Humi:      %RH";       
+unsigned char show8[] = " Temp:      C  ";    
+unsigned char show9[] = "       1/4     ";  
+unsigned char show10[] = "Pres:        Pa";
+unsigned char show11[] = " Atm:          ";
+unsigned char show12[] = "       2/4      ";  
+unsigned char show13[] = "Smoke/gas: "; 
+unsigned char show14[] = "Light:"; 
+unsigned char show15[] = "       3/4      "; 
+unsigned char show16[] = "GP2valt:      V"; 
+unsigned char show17[] = "  ugm3:"; 
+unsigned char show18[] = "       4/4      "; 
+     
+unsigned char logo0[]={                           
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3F, 0xF8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xFF, 0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x07,0xFF,
+      0xFF,0xC0,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x1F,0xFF, 0xFF,0xF0,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x3F,0xFF, 0xFF,0xF8,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x7F,0xF0,
+      0x07,0xFC,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0x81, 0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x01,0xFE,0x01, 0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x03,0xFC,0x01,
+      0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x03,0xF9,0x01, 0x80,0xC0,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x07,0xF3,0x81, 0x81,0xC0,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x07,0xE1,0xCF,
+      0xF3,0x80,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x0F,0xC0,0xFF, 0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x0F,0xC0,0x7F, 0xFE,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x0F,0x80,0x7F,
+      0xFE,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x0F,0x80,0xFC, 0x3F,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x1F,0x80,0xF8, 0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x1F,0x9F,0xF1,
+      0x8F,0xFC,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x1F,0x9F,0xF1, 0x8F,0xFC,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x1F,0x80,0xF1, 0x8F,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x1F,0x80,0x78,
+      0x1E,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x0F,0x80,0x7C, 0x3E,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x0F,0xC0,0x7F, 0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x0F,0xC0,0xFF,
+      0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x07,0xE1,0xCF, 0xF7,0x80,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x07,0xF3,0x83, 0xC1,0xC0,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x03,0xF3,0x01,
+      0x80,0xC0,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x03,0xF8,0x01, 0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x01,0xFE,0x01, 0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0x81,
+      0x80,0xFF,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x7F,0xE0, 0x07,0xFE,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x3F,0xFF, 0xFF,0xFC,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x0F,0xFF,
+      0xFF,0xF8,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x03,0xFF, 0xFF,0xE0,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF, 0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3F,
+      0xFC,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x03, 0xC0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x60,0x00,0x0C,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0xF0,0x00,0x0C,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x01,0x98,0x00,0x0C,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x01,0x98,0x00,0x0C,0x00,
+      0x00,0x00,0x00,0x00,0x18,0x00,0x00,0x00, 0x00,0x00,0x00,0x03,0x0C,0x00,0x0C,0x3F, 0xF3,0xFF,0x0F,0xF8,0x18,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x03,0x0C,0x07,0xFC,0x3F, 0xF3,0xFF,0x0F,0xF8,0x7F,0x00,0x00,0x00, 0x00,0x00,0x00,0x06,0x06,0x07,0xFC,0x30,
+      0x33,0x03,0x0C,0x18,0x7F,0x00,0x00,0x00, 0x00,0x00,0x00,0x06,0x06,0x06,0x0C,0x30, 0x33,0x03,0x0C,0x18,0x18,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x07,0xFE,0x06,0x0C,0x3F, 0xF3,0xFF,0x0C,0x18,0x18,0x00,0x00,0x00, 0x00,0x00,0x00,0x0F,0xFF,0x06,0x0C,0x3F,
+      0xF3,0xFF,0x0C,0x18,0x18,0x00,0x00,0x00, 0x00,0x00,0x00,0x0C,0x03,0x06,0x0C,0x30, 0x03,0x00,0x0C,0x18,0x18,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x18,0x01,0x87,0xFC,0x3F, 0xF3,0xFF,0x0F,0xF8,0x1F,0x00,0x00,0x00, 0x00,0x00,0x00,0x18,0x01,0x87,0xFC,0x3F,
+      0xF3,0xFF,0x0F,0xF8,0x1F,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x0C,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x0C,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x0C,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+};
+
+int page = 0;          //Page control, display page and parameter settings page
+int staticDisplay = 0; //Static display. Reduce the display of data repeatedly
+
+
+void setup()
+{
+    pinMode(redPin, OUTPUT);          // sets the redPin to be an output 
+    pinMode(greenPin, OUTPUT);        // sets the greenPin to be an output 
+    pinMode(bluePin, OUTPUT);         // sets the bluePin to be an output 
+    pinMode(gassensorAPin, INPUT);    //Set analog 0 port mode, the INPUT for the input
+    pinMode(passiveBuzzerPin,OUTPUT); //set digital 5 port mode, the OUTPUT for the output
+    pinMode(blueButton1Pin,INPUT);    //Set digital 13 port mode, the INPUT for the input
+    pinMode(blueButton2Pin,INPUT);    //Set digital 12 port mode, the INPUT for the input
+    pinMode(redButtonPin,INPUT);      //Set digital 1 port mode, the INPUT for the input
+    pinMode(whiteButtonPin,INPUT);    //Set digital 0 port mode, the INPUT for the input
+    pinMode(photoresistorPin, INPUT); //Set analog 0 port mode, the INPUT for the input 
+
+    Adeept_bmp180.begin();
+    color(0,0,0);                // turn off the RGB LED
+    Adeept_12864.Initialise(); // The screen is initialized
+    delay(100);
+    Adeept_12864.CLEAR();      // Clear screen
+    delay(100);
+    Adeept_dht11.read(DHT11PIN);
+    delay(100);
+    Adeept_gp2.begin();
+    
+
+}
+
+void loop()
+{
+   keyDetection();//Detects four key data functions
+   showPage();
+   delay(100);
+}
+void bootInitialization()
+{
+    Adeept_12864.DrawFullScreen(logo0);
+    delay(2000);
+    Adeept_12864.CLEAR();//Clear screen
+    delay(100);
+    Adeept_12864.DisplayString(1,0,show1,AR_SIZE(show1));//display show1[]
+    delay(100);
+    Adeept_12864.DisplayString(2,0,show2,AR_SIZE(show2));//display show2[]
+    delay(3000);
+}
+void keyDetection()
+{
+    if(digitalRead(whiteButtonPin)==LOW){//Shutdown function
+       delay(10);                        //Delay 10ms for the elimination of key leading-edge jitter
+       if(digitalRead(whiteButtonPin)==LOW){       //Confirm button is pressed
+           while(digitalRead(whiteButtonPin)==LOW);//Wait for key interfaces to high
+           Adeept_12864.CLEAR();//Clear screen
+           delay(100);
+           if(page!=0){ //To prevent repeated shutdown
+              for(int i=0;i<2;i++){
+                  Adeept_12864.DisplayString(1,0,show4,AR_SIZE(show4));//display show4[]
+                  delay(1000);
+                  Adeept_12864.DisplayString(1,0,show5,AR_SIZE(show5));//display show5[]
+                  delay(1000);
+                  Adeept_12864.DisplayString(1,0,show6,AR_SIZE(show6));//display show6[]
+                  delay(1000);
+              }
+              Adeept_12864.CLEAR();//Clear screen
+              delay(100);
+           }
+           color(0,0,0);  // turn off the RGB LED  
+           page = 0;
+        }
+     }
+     if(digitalRead(redButtonPin)==LOW){          //Boot function
+        delay(10);                                //Delay 10ms for the elimination of key leading-edge jitter
+        if(digitalRead(redButtonPin)==LOW){       //Confirm button is pressed
+           while(digitalRead(redButtonPin)==LOW); //Wait for key interfaces to high
+           Adeept_12864.CLEAR();                //Clear screen
+           delay(100);
+           bootInitialization();
+           staticDisplay = 0;
+           page = 1;
+        }
+     }
+     if(digitalRead(blueButton1Pin)==LOW){          //Boot function
+        delay(10);                                  //Delay 10ms for the elimination of key leading-edge jitter
+        if(digitalRead(blueButton1Pin)==LOW){       //Confirm button is pressed
+           while(digitalRead(blueButton1Pin)==LOW); //Wait for key interfaces to high
+           if(page!=0){
+              Adeept_12864.CLEAR();               //Clear screen
+              delay(100);
+              staticDisplay = 0;
+              page = page - 1;
+              if(page <= 1){
+                 page = 1;
+               }
+            }
+        }
+      }
+     if(digitalRead(blueButton2Pin)==LOW){          //Boot function
+        delay(10);                                  //Delay 10ms for the elimination of key leading-edge jitter
+        if(digitalRead(blueButton2Pin)==LOW){       //Confirm button is pressed
+           while(digitalRead(blueButton2Pin)==LOW); //Wait for key interfaces to high
+           Adeept_12864.CLEAR();//Clear screen
+           delay(100);
+           staticDisplay = 0;
+           if(page!=0){
+              page = page + 1;
+              if(page >= 4){
+                 page = 4;
+              }
+           }
+        }
+      }      
+}
+void showPage()
+{
+    double temphumidity = 0;
+    double tempTemperature = 0;
+    double dataphotoresistor = 0;
+    char strhumidity[2];
+    char strTemperature[2];
+    char strPressure[5];
+    char strAtm[5];
+    char strphotoresistor[4];
+    float dataTemperature = 0; 
+    float dataPressure = 0;
+    float dataAtm = 0; 
+    double datagassensor = 0;
+    char strgassensor[5];
+    double tempOutputV = 0;
+    double tempUgm3 = 0;
+    char strUgm3[5];
+    char strOutputV[5];
+    char strSecond[2];
+    char strMinute[2];
+    char strTime[2];
+    newTime = millis();
+    time = (newTime - oldTime)/1000;
+    if(time>=1){oldTime = newTime;Second = Second + time; }
+    if(Second >= 60){ Second = 0; Minute++; }
+    if(Minute>=60){ Minute = 0;Time++; }
+    if(Time>=24){ Time = 0;}
+    temphumidity = Adeept_dht11.humidity;
+    tempTemperature = Adeept_dht11.temperature;
+    datagassensor = analogRead(gassensorAPin);
+    dataphotoresistor = analogRead(photoresistorPin);
+
+    if(page != 0){
+       if(temphumidity>humidityThreshold||tempTemperature>temperatureThreshold||datagassensor>gasThreshold){
+          color(255, 0, 0);                   //turn the RGB LED red  
+          tone(passiveBuzzerPin,500);         //1000Hz frequency: 31~65535Hz 
+          delay(100);                         //set the delay time，100ms
+          noTone(passiveBuzzerPin);           //Turn off the buzzer
+       }else{
+          color(0,255, 0);                    //turn the RGB LED green 
+       }
+       dtostrf(Time,2,0,strTime);      //Converts a floating-point number to a string
+       dtostrf(Minute,2,0,strMinute);  //Converts a floating-point number to a string
+       dtostrf(Second,2,0,strSecond);  //Converts a floating-point number to a string
+       Adeept_12864.DisplayString(0,1,(unsigned char *)strTime,2);  //Display time data
+       Adeept_12864.DisplayString(0,3,(unsigned char *)strMinute,2);//Display minute data
+       Adeept_12864.DisplayString(0,5,(unsigned char *)strSecond,2);//Display second data
+    }
+    if(page == 0){
+       color(0,0, 0);  // turn off the RGB LED  
+    }
+    switch(page){
+    case 1:   
+           if(staticDisplay == 0){
+              Adeept_12864.DisplayString(1,0,(unsigned char *)show7,AR_SIZE(show7));//Display: Humi:     %RH
+              delay(10);
+              Adeept_12864.DisplayString(2,0,(unsigned char *)show8,AR_SIZE(show8));//Display: Temp:     C
+              delay(10);
+              Adeept_12864.DisplayString(3,0,(unsigned char *)show9,AR_SIZE(show9));//Display: page number
+              delay(10);
+              Adeept_12864.DisplayString(0,0,(unsigned char *)show0,AR_SIZE(show0));//Display "    :   :"
+              delay(10);
+              staticDisplay = 1;
+           }
+           dtostrf(temphumidity,5,2,strhumidity);                              //Converts a floating-point number to a string
+           Adeept_12864.DisplayString(1,3,(unsigned char *)strhumidity,6);   //Display humidity data
+           dtostrf(tempTemperature,5,2,strTemperature);                        //Converts a floating-point number to a string
+           Adeept_12864.DisplayString(2,3,(unsigned char *)strTemperature,6);//Display temperature data
+           break;
+    case 2:
+           if(staticDisplay == 0){
+              Adeept_12864.DisplayString(1, 0, (unsigned char *)show10, AR_SIZE(show10)); //Display: Pres:        Pa
+              delay(10);
+              Adeept_12864.DisplayString(2, 0, (unsigned char *)show11, AR_SIZE(show11)); //Display: Atm:         
+              delay(10);
+              Adeept_12864.DisplayString(3, 0, (unsigned char *)show12, AR_SIZE(show12)); //Display: page number
+              delay(10);
+              Adeept_12864.DisplayString(0,0,(unsigned char *)show0,AR_SIZE(show0));      //Display "    :   :"
+              delay(10);
+              staticDisplay = 1;
+           }
+           dataTemperature = Adeept_bmp180.GetTemperature(); 
+           dataPressure = Adeept_bmp180.GetPressure();
+           dataAtm = dataPressure / 101325;          // "standard atmosphere"
+           dtostrf(dataPressure, 5, 2, strPressure); //Converts a floating-point number to a string
+           Adeept_12864.DisplayString(1, 3, (unsigned char *)strPressure, 6); //Display pressure data
+           dtostrf(dataAtm, 5, 4, strAtm);           //Converts a floating-point number to a string
+           Adeept_12864.DisplayString(2, 3, (unsigned char *)strAtm, 6);      //Display standard atmosphere data
+           break;
+    case 3:
+           if(staticDisplay == 0){
+              Adeept_12864.DisplayString(1, 0, (unsigned char *)show13, AR_SIZE(show13)); //Display: Smoke/gas:
+              delay(10);
+              Adeept_12864.DisplayString(2, 0, (unsigned char *)show14, AR_SIZE(show14)); //Display: Light:
+              delay(10);
+              Adeept_12864.DisplayString(3, 0, (unsigned char *)show15, AR_SIZE(show15)); //Display: page number
+              delay(10);
+              Adeept_12864.DisplayString(0,0,(unsigned char *)show0,AR_SIZE(show0));      //Display "    :   :"
+              delay(10);
+              staticDisplay = 1;
+           }
+           dtostrf(datagassensor,4,0,strgassensor);        //Converts a floating-point number to a string
+           Adeept_12864.DisplayString(1,5,(unsigned char *)strgassensor,4);    //Display smoke/gas data
+           dtostrf(dataphotoresistor,4,0,strphotoresistor);//Converts a floating-point number to a string
+           Adeept_12864.DisplayString(2,3,(unsigned char *)strphotoresistor,4);//Display photoresistor data
+           break;
+    case 4:
+          if(staticDisplay == 0){
+              Adeept_12864.DisplayString(1, 0, (unsigned char *)show16, AR_SIZE(show16)); //Display: GP2valt:     V
+              delay(10);
+              Adeept_12864.DisplayString(2, 0, (unsigned char *)show17, AR_SIZE(show17)); //Display: ugm3:
+              delay(10);
+              Adeept_12864.DisplayString(3, 0, (unsigned char *)show18, AR_SIZE(show18)); //Display: page number
+              delay(10);
+              Adeept_12864.DisplayString(0, 0, (unsigned char *)show0,AR_SIZE(show0));    //Display "    :   :"
+              delay(10);
+              staticDisplay = 1;
+           }
+           tempOutputV = Adeept_gp2.getOutputV(); //Sampling Get the output voltage
+           dtostrf(tempOutputV,5,2,strOutputV);     //Converts a floating-point number to a string
+           Adeept_12864.DisplayString(1,4,(unsigned char *)strOutputV,6);//Display GP2 valtage data
+           tempUgm3 = Adeept_gp2.getDustDensity(tempOutputV);         //Calculate the dust concentration
+           dtostrf(tempUgm3,5,2,strUgm3);           //Converts a floating-point number to a string
+           Adeept_12864.DisplayString(2,4,(unsigned char *)strUgm3,6);//Display ugm3 data
+          break;
+    default:break;
+    }
+}
+void color (unsigned char red, unsigned char green, unsigned char blue)// the color generating function  
+{    
+     analogWrite(redPin, 255-red);     // PWM signal output   
+     analogWrite(greenPin, 255-green); // PWM signal output
+     analogWrite(bluePin, 255-blue);   // PWM signal output
+} 
+
+
+
+

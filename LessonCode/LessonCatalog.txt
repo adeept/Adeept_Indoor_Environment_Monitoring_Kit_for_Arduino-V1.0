@@ -1,0 +1,48 @@
+
+Note: 
+1. Lesson 35 is the procedure in the tutorial.
+2. Lesson 31~34 use the Processing software download link as follows: https://processing.org/download/
+3. Lesson 36 Use U8glib.zip library.(Not SPI interface)
+
+
+Lesson1 Blinking LED
+Lesson2 Control An LED By Serial
+Lesson3 Upload The State Of A Button To PC  
+Lesson4 Control An LED By Button
+Lesson5 Buzzer
+Lesson6 Music
+Lesson7 Control Buzzer By Button
+Lesson8 Change The Color Of The RGB LED
+Lesson9 Control RGB By Button
+Lesson10 Detection Of Light
+Lesson11 Control RGB By Photoresistor
+Lesson12 Control LCD12864 By SPI 
+Lesson13 The Four Buttons Information Are Displayed On LCD12864
+Lesson14 The Photoresistor Information Is Displayed On LCD12864
+Lesson15 Upload The Information Of dht_11(Temperature and humidity) To PC
+Lesson16 A Simple Temperature & Humidity Monitoring And Alarm System(Via RGB)
+Lesson17 A Simple Temperature & Humidity Monitoring And Alarm System(Via Buzzer)
+Lesson18 The dht_11(Temperature and humidity) Information Are Displayed On LCD12864
+Lesson19 A Simple Temperature & Humidity Monitoring And Alarm System(On LCD12864,Via RGB&Buzzer)
+Lesson20 Upload The Information Of MQ_2(Flammable Gases) To PC
+Lesson21 A Simple Flammable Gases Monitoring And Alarm System(Via RGB)
+Lesson22 A Simple Flammable Gases Monitoring And Alarm System(Via Buzzer)
+Lesson23 The MQ_2(Flammable Gases) Information Is Displayed On LCD12864
+Lesson24 A Simple Flammable Gases Monitoring And Alarm System(On LCD12864,Via RGB&Buzzer)
+Lesson25 Set The MQ_2(Flammable Gases) Alarm Threshold By Four Buttons
+Lesson26 Upload The Information Of The Dust To PC 
+Lesson27 The Dust Information Are Displayed On LCD12864
+Lesson28 Upload The Information Of The Barometer To PC 
+Lesson29 The Barometer Information Are Displayed On LCD12864
+Lesson30 A Simple Clock(On LCD12864)
+Lesson31 Control LED By Processing
+Lesson32 Upload The State Of Four Buttons To Processing
+Lesson33 Upload The Information Of Photoresistor To Processing  
+Lesson34 Control RGB By Processing
+Lesson35 Adeept Weather Box 
+Lesson36 Adeept Snake Game
+
+
+
+
+
